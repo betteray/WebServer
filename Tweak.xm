@@ -1,29 +1,91 @@
-#import <CydiaSubstrate2.h>
 #import "GCDWebUploader.h"
-
-// #import "GCDWebServer.h"
-// #import "GCDWebServerDataResponse.h"
 
 #warning need fix GCDWebServer GCDWebUploader instantiation method
 #define kBundlePath @"/Library/MobileSubstrate/DynamicLibraries/me.ray.webserver.bundle"
 
-static NSString * const APP_DELEGATE_CLASS = @"MicroMessengerAppDelegate";
+static void * observer = NULL;
+static GCDWebUploader* webUploader = NULL;
 
-DefineHook(BOOL, application_didFinishLaunchingWithOptions_, id self, SEL _cmd, UIApplication * application, NSDictionary *launchOptions) {
-    BOOL result = original_application_didFinishLaunchingWithOptions_(self, _cmd, application, launchOptions);
-    
+static void UIApplicationDidFinishLaunchingNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
     NSString* documentsPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
-  	GCDWebUploader* webUploader = [[GCDWebUploader alloc] initWithUploadDirectory:documentsPath];
-  	[webUploader start];
-  	NSLog(@"GCDWebUploader: Visit (webUploader=%@) %@ in your web browser", webUploader, webUploader.serverURL);
-
-    return result;
+  	webUploader = [[GCDWebUploader alloc] initWithUploadDirectory:documentsPath];
+    NSLog(@"WebServer: GCDWebUploader has been created: %@", webUploader);
 }
 
+static void UIApplicationDidBecomeActiveNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+    [webUploader start];
+  	NSLog(@"WebServer: Visit (webUploader=%@) %@ in your web browser", webUploader, webUploader.serverURL);
+}
+
+static void UIApplicationWillResignActiveNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+    [webUploader stop];
+    NSLog(@"WebServer: GCDWebUploader has been stoped.");
+}
+ 
+%hook NSBundle
+
+// don't need touch GCDWebUploader source file or the instantiation of GCDWebUploader will failed.
+- (NSString *)pathForResource:(NSString *)name ofType:(NSString *)ext {
+    if([name isEqualToString:@"GCDWebUploader"] && [ext isEqualToString:@"bundle"]) {
+      return kBundlePath;
+    }
+    
+    return %orig;
+}
+
+%end
+
 %ctor {
-    InstallObjCInstanceHook(NSClassFromString(APP_DELEGATE_CLASS), 
-                            @selector(application:didFinishLaunchingWithOptions:), 
-                            application_didFinishLaunchingWithOptions_);
+	CFNotificationCenterAddObserver(
+		CFNotificationCenterGetLocalCenter(),
+		&observer,
+		UIApplicationDidFinishLaunchingNotificationCallback,
+		(CFStringRef)UIApplicationDidFinishLaunchingNotification,
+		NULL,
+		CFNotificationSuspensionBehaviorCoalesce
+	);
+
+  CFNotificationCenterAddObserver(
+		CFNotificationCenterGetLocalCenter(),
+		&observer,
+		UIApplicationDidBecomeActiveNotificationCallback,
+		(CFStringRef)UIApplicationDidBecomeActiveNotification,
+		NULL,
+		CFNotificationSuspensionBehaviorCoalesce
+	);
+
+  CFNotificationCenterAddObserver(
+		CFNotificationCenterGetLocalCenter(),
+		&observer,
+		UIApplicationWillResignActiveNotificationCallback,
+		(CFStringRef)UIApplicationWillResignActiveNotification,
+		NULL,
+		CFNotificationSuspensionBehaviorCoalesce
+	);
+}
+
+// Remove observer upon unloading the dylib
+%dtor {
+	CFNotificationCenterRemoveObserver(
+		CFNotificationCenterGetLocalCenter(),
+		&observer,
+		(CFStringRef)UIApplicationDidFinishLaunchingNotification,
+		NULL
+	);
+
+  CFNotificationCenterRemoveObserver(
+		CFNotificationCenterGetLocalCenter(),
+		&observer,
+		(CFStringRef)UIApplicationDidBecomeActiveNotification,
+		NULL
+	);
+
+  CFNotificationCenterRemoveObserver(
+		CFNotificationCenterGetLocalCenter(),
+		&observer,
+		(CFStringRef)UIApplicationWillResignActiveNotification,
+		NULL
+	);
 }
 
 
