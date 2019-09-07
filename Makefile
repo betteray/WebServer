@@ -1,7 +1,7 @@
 include $(THEOS)/makefiles/common.mk
 
 # FULL PATH of the GCDWebServer repo on your own machine
-GCDWebServer_ROOT = /Users/ray/Documents/github/GCDWebServer
+GCDWebServer_ROOT = ./vendor/GCDWebServer
 
 # Function to convert /foo/bar to -I/foo/bar
 dtoim = $(foreach d,$(1),-I$(d))
