@@ -1,0 +1,9 @@
+Package: me.ray.webserver
+Name: WebServer
+Depends: mobilesubstrate
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Start a web server in documents when app starts up.
+Maintainer: ray
+Author: ray
+Section: Tweaks
