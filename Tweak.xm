@@ -5,6 +5,12 @@
 
 static void * observer = NULL;
 static GCDWebUploader* webUploader = NULL;
+static bool is_springboard() {
+	NSDictionary *infoDictionary = [[NSBundle mainBundle] infoDictionary];
+	NSString *appBundle = [infoDictionary objectForKey:@"CFBundleIdentifier"];
+
+	return [appBundle isEqualToString:@"com.apple.springboard"];
+}
 
 static void UIApplicationDidFinishLaunchingNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
     NSString* documentsPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
@@ -36,6 +42,8 @@ static void UIApplicationWillResignActiveNotificationCallback(CFNotificationCent
 %end
 
 %ctor {
+	if (is_springboard()) return; // don't hook springboard, or when respring will cause iusue.
+
 	CFNotificationCenterAddObserver(
 		CFNotificationCenterGetLocalCenter(),
 		&observer,
@@ -66,6 +74,8 @@ static void UIApplicationWillResignActiveNotificationCallback(CFNotificationCent
 
 // Remove observer upon unloading the dylib
 %dtor {
+	if (is_springboard()) return; // don't hook springboard, or when respring will cause iusue.
+
 	CFNotificationCenterRemoveObserver(
 		CFNotificationCenterGetLocalCenter(),
 		&observer,
