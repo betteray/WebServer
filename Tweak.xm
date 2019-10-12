@@ -13,8 +13,10 @@ static bool is_springboard() {
 }
 
 static void UIApplicationDidFinishLaunchingNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
-    NSString* documentsPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
-  	webUploader = [[GCDWebUploader alloc] initWithUploadDirectory:documentsPath];
+    // NSString* documentsPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+	// NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
+	NSString* homePath = NSHomeDirectory();
+  	webUploader = [[GCDWebUploader alloc] initWithUploadDirectory:homePath];
     NSLog(@"WebServer: GCDWebUploader has been created: %@", webUploader);
 }
 
