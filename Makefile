@@ -1,3 +1,5 @@
+THEOS_DEVICE_IP=192.168.2.5
+
 include $(THEOS)/makefiles/common.mk
 
 # FULL PATH of the GCDWebServer repo on your own machine

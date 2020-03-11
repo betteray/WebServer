@@ -5,11 +5,11 @@
 
 static void * observer = NULL;
 static GCDWebUploader* webUploader = NULL;
-static bool is_springboard() {
+static bool is_apple_app() {
 	NSDictionary *infoDictionary = [[NSBundle mainBundle] infoDictionary];
 	NSString *appBundle = [infoDictionary objectForKey:@"CFBundleIdentifier"];
 
-	return [appBundle isEqualToString:@"com.apple.springboard"];
+	return [appBundle containsString:@"apple"];
 }
 
 static void UIApplicationDidFinishLaunchingNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
@@ -21,11 +21,25 @@ static void UIApplicationDidFinishLaunchingNotificationCallback(CFNotificationCe
 }
 
 static void UIApplicationDidBecomeActiveNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
-    [webUploader start];
-  	NSLog(@"WebServer: Visit (webUploader=%@) %@ in your web browser", webUploader, webUploader.serverURL);
+    if (webUploader == nil) return;
+    if (webUploader.running) return;
+
+    NSError *error = nil;
+    NSMutableDictionary* options = [NSMutableDictionary dictionary];
+    [options setObject:[NSNumber numberWithInteger:80] forKey:GCDWebServerOption_Port];
+    [options setValue:@"" forKey:GCDWebServerOption_BonjourName];
+
+    if(![webUploader startWithOptions:options error:&error]) {
+        NSLog(@"WebServer: start error: %@", error);
+    } else {
+        NSLog(@"WebServer: Visit (webUploader=%@) %@ in your web browser", webUploader, webUploader.serverURL);
+    }
 }
 
 static void UIApplicationWillResignActiveNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+    if (webUploader == nil) return;
+    if (!webUploader.running) return;
+
     [webUploader stop];
     NSLog(@"WebServer: GCDWebUploader has been stoped.");
 }
@@ -44,7 +58,11 @@ static void UIApplicationWillResignActiveNotificationCallback(CFNotificationCent
 %end
 
 %ctor {
-	if (is_springboard()) return; // don't hook springboard, or when respring will cause iusue.
+	if (is_apple_app()) {
+        NSLog(@"It is apple app, i do not need.");
+        return; // don't hook springboard, or when respring will cause iusue.
+    }
+    
 
 	CFNotificationCenterAddObserver(
 		CFNotificationCenterGetLocalCenter(),
@@ -76,8 +94,11 @@ static void UIApplicationWillResignActiveNotificationCallback(CFNotificationCent
 
 // Remove observer upon unloading the dylib
 %dtor {
-	if (is_springboard()) return; // don't hook springboard, or when respring will cause iusue.
-
+	if (is_apple_app()) {
+        NSLog(@"It is apple app, i do not need.");
+        return; // don't hook springboard, or when respring will cause iusue.
+    }
+    
 	CFNotificationCenterRemoveObserver(
 		CFNotificationCenterGetLocalCenter(),
 		&observer,
